@@ -1,0 +1,22 @@
+{
+  "name": "jluszcz",
+  "owner": {
+    "name": "Jacob Luszcz"
+  },
+  "metadata": {
+    "description": "Skills for Claude Code",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "jluszcz",
+      "source": "./",
+      "description": "Code review agent and skills for reviewing code and committing changes",
+      "version": "1.0.0",
+      "author": {
+        "name": "Jacob Luszcz"
+      },
+      "agents": "./agents"
+    }
+  ]
+}
