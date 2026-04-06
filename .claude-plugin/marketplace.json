@@ -15,7 +15,8 @@
       "version": "1.0.1",
       "author": {
         "name": "Jacob Luszcz"
-      }
+      },
+      "skills": "./skills"
     }
   ]
 }
