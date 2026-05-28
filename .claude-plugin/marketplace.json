@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Skills for Claude Code",
-    "version": "1.0.2"
+    "version": "1.0.3"
   },
   "plugins": [
     {
       "name": "jluszcz",
       "source": "./",
       "description": "Skills and agents for development workflows and media organization",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "author": {
         "name": "Jacob Luszcz"
       },
