@@ -40,6 +40,17 @@ Disc 2: Episode D, Episode E, Episode F, Episode G, Episode H
 
 Assign sequential episode numbers starting at 1 across all discs.
 
+**If any text in the image is unclear, blurry, cut off, or ambiguous**, do not guess — stop and
+ask the user for clarification before proceeding. Be specific about what you cannot read:
+
+> "I can read most of the episode listing, but I'm having trouble with:
+> - Disc 2, episode 3: the title looks like 'The ??? of ???' — can you type it out?
+> - Disc 4 heading: partially cut off, could be Disc 4 or Disc 6 — which is it?
+>
+> Please clarify these entries and I'll continue."
+
+Only proceed once every disc heading and every episode title is confirmed.
+
 ## Step 2: Find Source Directories
 
 Look in the source directory for folders matching the disc pattern. Common patterns:
@@ -196,6 +207,8 @@ Confirm all expected files are present and print a summary of what was done.
 
 - **Never overwrite** — always check for conflicts before moving anything
 - **Never guess episode order** — use the listing from the image/text exactly
+- **Never guess unreadable image text** — ask for clarification on any blurry, cut-off, or
+  ambiguous text before building the episode mapping
 - **Ask about multi-episode files** before building the rename plan, not after
 - If source files are missing or the count doesn't match the episode listing, tell the user
   before proceeding
