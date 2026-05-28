@@ -7,6 +7,7 @@ permissions:
     - Bash(ls*)
     - Bash(mkdir*)
     - Bash(mv*)
+    - Bash(rmdir*)
 description: >
   Rename ripped TV show disc files into properly named episode files using a disc/episode listing
   (from a photo/image of the disc case or a typed list). Use this skill whenever the user wants to
@@ -33,6 +34,9 @@ They will also tell you (or you should ask):
 - Season number
 - Source directory containing the disc folders
 - Destination directory for renamed files
+
+**Collect all four pieces of information before scanning the filesystem.** If any are missing,
+ask for them upfront rather than mid-process.
 
 ## Step 1: Parse the Episode Listing
 
@@ -80,14 +84,21 @@ Then filter by size (bytes), keeping only files ≥ 200 MB (209715200 bytes):
 
 ```bash
 # macOS
-stat -f "%z %N" "<source_dir>/DISC FOLDER NAME"/title_t*.mkv | awk '$1 >= 209715200 {print $2}' | sort
+stat -f "%z %N" "<source_dir>/DISC FOLDER NAME"/*.mkv | awk '$1 >= 209715200 {print $2}' | sort
 
 # Linux
-stat -c "%s %n" "<source_dir>/DISC FOLDER NAME"/title_t*.mkv | awk '$1 >= 209715200 {print $2}' | sort
+stat -c "%s %n" "<source_dir>/DISC FOLDER NAME"/*.mkv | awk '$1 >= 209715200 {print $2}' | sort
 ```
 
-Files will typically be named `title_t00.mkv`, `title_t01.mkv`, etc. The numeric order of the
-filenames corresponds to episode order on that disc.
+Files may be named `title_t00.mkv`, `title_t01.mkv`, etc., or may carry a show-name prefix like
+`Show Name Season 1 Disc 1_t03.mkv`. The numeric suffix determines episode order on that disc
+regardless of the prefix.
+
+**After filtering, explicitly report any excluded files** so the user can see what was skipped:
+
+> "Skipped as menus/featurettes (<200 MB): Disc 1/t00.mkv, Disc 2/t02.mkv, Disc 5/t01.mkv …"
+
+If no files were excluded, say so.
 
 **Stop and tell the user if:**
 - Fewer disc folders are found than the listing specifies (e.g., listing has 6 discs but only 5
@@ -103,10 +114,10 @@ Get byte-exact sizes for all episode-sized files across every disc:
 
 ```bash
 # macOS — prints size in bytes then filename
-stat -f "%z %N" "<source_dir>/DISC FOLDER"/title_t*.mkv
+stat -f "%z %N" "<source_dir>/DISC FOLDER"/*.mkv
 
 # Linux
-stat -c "%s %n" "<source_dir>/DISC FOLDER"/title_t*.mkv
+stat -c "%s %n" "<source_dir>/DISC FOLDER"/*.mkv
 ```
 
 Calculate the **median file size** (in bytes) across all episode files:
@@ -181,28 +192,43 @@ to proceed.
 
 ## Step 6: Create Destination and Execute
 
+Emit **all moves as a single bash script** in one tool call. This is much faster than one call per
+file:
+
 ```bash
+set -e
 mkdir -p "<destination_dir>"
+mv "<source_dir>/DISC FOLDER 1/prefix_t00.mkv" "<destination_dir>/Show Name - s01e01.mkv" && echo "Moved: s01e01 (Episode A)"
+mv "<source_dir>/DISC FOLDER 1/prefix_t01.mkv" "<destination_dir>/Show Name - s01e02.mkv" && echo "Moved: s01e02 (Episode B)"
+mv "<source_dir>/DISC FOLDER 1/prefix_t02.mkv" "<destination_dir>/Show Name - s01e03-e04.mkv" && echo "Moved: s01e03-e04 (Episode C + D)"
+mv "<source_dir>/DISC FOLDER 2/prefix_t00.mkv" "<destination_dir>/Show Name - s01e05.mkv" && echo "Moved: s01e05 (Episode E)"
+# ... one mv && echo per file, all in the same script
 ```
 
-Move each file individually, one at a time, reporting each move before executing it:
+Do not split into multiple tool calls.
+
+## Step 7: Clean Up Empty Disc Folders
+
+**Only run this step if the Step 6 script exited successfully (exit code 0).** With `set -e`, a failed `mv` will abort the script early — if that happened, report the failure to the user and stop rather than proceeding to cleanup.
+
+After all moves succeed, remove any source disc folders that are now empty:
 
 ```bash
-mv "<source_dir>/DISC FOLDER 1/title_t00.mkv" "<destination_dir>/Show Name - s01e01.mkv"
-echo "Moved: Show Name - s01e01.mkv (Episode A)"
-
-mv "<source_dir>/DISC FOLDER 1/title_t01.mkv" "<destination_dir>/Show Name - s01e02.mkv"
-echo "Moved: Show Name - s01e02.mkv (Episode B)"
-
-mv "<source_dir>/DISC FOLDER 1/title_t02.mkv" "<destination_dir>/Show Name - s01e03-e04.mkv"
-echo "Moved: Show Name - s01e03-e04.mkv (Episode C + D)"
-
-# ... one mv + echo per file
+for dir in \
+  "<source_dir>/DISC FOLDER 1" \
+  "<source_dir>/DISC FOLDER 2"; do
+  if rmdir "$dir" 2>/dev/null; then
+    echo "Removed empty folder: $dir"
+  else
+    echo "Kept (not empty): $dir"
+  fi
+done
 ```
 
-Issue each `mv` and `echo` as a separate command. Do not batch moves.
+`rmdir` only removes a directory if it is empty, so this is safe even if menus or featurettes
+remain. Do not use `rm -rf`.
 
-## Step 7: Verify
+## Step 8: Verify
 
 ```bash
 ls "<destination_dir>/"
@@ -222,3 +248,9 @@ Confirm all expected files are present and print a summary of what was done.
 - If the user provides a partial listing (e.g., only some discs), only rename those discs
 - **Skip small files** — any file under 200 MB is not an episode (it's a menu, trailer, or
   featurette); never assign it an episode number
+- **Always disclose filtered files** — explicitly tell the user which files were excluded and why,
+  so gaps in track numbering (e.g., t01 missing between t00 and t02) are not a mystery
+- **Batch all moves into one script** — do not issue one tool call per file; emit a single bash
+  script with all mv commands
+- **Never force-remove source folders** — use `rmdir` (not `rm -rf`) so only empty directories
+  are deleted after the rename
