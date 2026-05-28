@@ -11,7 +11,7 @@
     {
       "name": "jluszcz",
       "source": "./",
-      "description": "Code review agent and skills for reviewing code and committing changes",
+      "description": "Skills and agents for development workflows and media organization",
       "version": "1.0.1",
       "author": {
         "name": "Jacob Luszcz"

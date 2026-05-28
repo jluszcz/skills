@@ -1,0 +1,29 @@
+{
+  "skill_name": "rip-rename",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I ripped Star Trek TNG Season 1 and the files are in ~/Downloads/ in folders called 'STAR TREK TNG S1 D1' through 'STAR TREK TNG S1 D6'. Here's the episode listing:\nDisc 1: Encounter at Farpoint, The Naked Now, Code of Honor\nDisc 2: The Last Outpost, Where No One Has Gone Before, Lonely Among Us, Justice, The Battle\nDisc 3: Hide and Q, Haven, The Big Goodbye, Datalore, Angel One\nDisc 4: 11001001, Too Short a Season, When the Bough Breaks, Home Soil, Coming of Age\nDisc 5: Heart of Glory, The Arsenal of Freedom, Symbiosis, Skin of Evil, We'll Always Have Paris\nDisc 6: Conspiracy, The Neutral Zone\nRename them all into ~/Downloads/Season 01/ as 'Star Trek The Next Generation - s01eXX.mkv'",
+      "expected_output": "Skill should discover the 6 disc folders using find, filter episode-sized files (>=200MB) on each disc, get byte-exact sizes with stat, calculate the median, find no files 1.7x or larger, build a full rename plan showing all 25 episodes with their file sizes, run a conflict check against the destination with a real bash loop, create the destination directory, and execute moves one at a time with an echo after each. No double episode detection triggered since this is a standard rip. Conflict check should report 'no conflicts' and proceed immediately.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I have Sopranos Season 2 ripped to /Volumes/Media/Sopranos/. The disc folders are 'SOPRANOS S2 D1' through 'SOPRANOS S2 D4'. Episodes per disc:\nDisc 1: Guy Walks Into a Psychiatrist's Office, Do Not Resuscitate, Toodle-F***ing-Oo, Commendatori\nDisc 2: Big Girls Don't Cry, The Swarthy One Wore Earrings, D-Girl, Full Leather Jacket\nDisc 3: From Where to Eternity, Bust Out, House Arrest, The Knight in White Satin Armor\nDisc 4: Funhouse\nPut the output in /Volumes/Media/Sopranos/Season 02/ named 'The Sopranos - s02eXX.mkv'.",
+      "expected_output": "Skill should discover the 4 disc folders using find, run stat to get byte-exact sizes for all episode-sized files (>=200MB) on each disc, calculate the median size, check for files 1.7x or larger, build a 13-episode plan showing sizes, run a conflict check with a real bash loop, create the output directory, and execute 13 individual mv+echo pairs. Handles uneven disc distribution (4/4/4/1 episodes). If any file is significantly larger than the median, it must ask the user before proceeding.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Renaming Band of Brothers Season 1. Source is ~/Downloads/ with folders BAND OF BROTHERS S1 D1 through D6. Episodes:\nDisc 1: Currahee, Day of Days\nDisc 2: Carentan, Replacements\nDisc 3: Crossroads, Bastogne\nDisc 4: The Breaking Point, The Last Patrol\nDisc 5: Why We Fight, Points\nDisc 6: (just the miniseries recap - no episodes, just special features)\nOutput to ~/Downloads/Season 01/ as 'Band of Brothers - s01eXX.mkv'",
+      "expected_output": "Skill should discover the disc folders, filter by size to find episode files, and run stat to get byte-exact sizes. It should detect that one file on Disc 1 is ~2x the size of other files and ask the user how many episodes it contains. The skill must NOT proceed with renaming until it gets an answer. It should present single, double, and any other size-appropriate options. If user says double, e01-e02 would be used for that file and 'Day of Days' would become e03. Disc 6 should be skipped entirely (no episode-sized files after filtering, matching the listing which has no episodes). Skill should also discover and skip any files under 200MB (menus/featurettes) without assigning them episode numbers.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "I ripped The Wire Season 1 to ~/Downloads/. Disc folders are 'WIRE S1 D1' through 'WIRE S1 D5'. Episode listing:\nDisc 1: The Target, The Detail\nDisc 2: The Buys, Old Cases\nDisc 3: The Pager, The Wire\nDisc 4: One Arrest, Lessons\nDisc 5: Game Day, The Hunt, Cleaning Up, Sentencing\nRename them into ~/Downloads/Wire Season 01/ as 'The Wire - s01eXX.mkv'. Note: I already renamed some files earlier — s01e01.mkv and s01e02.mkv already exist in the destination.",
+      "expected_output": "Skill should build the full rename plan for all 12 episodes, then run the conflict check bash loop against the destination directory. It should detect that 'The Wire - s01e01.mkv' and 'The Wire - s01e02.mkv' already exist and immediately stop — reporting both conflicts to the user — without moving any files at all. It should ask the user how to proceed rather than partially executing the rename.",
+      "files": []
+    }
+  ]
+}
