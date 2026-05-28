@@ -1,5 +1,12 @@
 ---
 name: rip-rename
+permissions:
+  allow:
+    - Bash(find*)
+    - Bash(stat*)
+    - Bash(ls*)
+    - Bash(mkdir*)
+    - Bash(mv*)
 description: >
   Rename ripped TV show disc files into properly named episode files using a disc/episode listing
   (from a photo/image of the disc case or a typed list). Use this skill whenever the user wants to
