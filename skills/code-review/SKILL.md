@@ -1,6 +1,12 @@
 ---
 name: code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements. Always trigger after each significant implementation step — especially in multi-step workflows — so issues are caught before they compound. Also trigger when stuck, before a refactor, or after fixing a complex bug.
+description: >
+  Review code changes for correctness, architecture, and production readiness. Trigger whenever
+  the user asks to review code — "review my code", "look at what I just wrote", "can you check
+  this", "does this look right", "give me a code review" — as well as after completing tasks,
+  implementing major features, or before merging. Always trigger after each significant
+  implementation step in multi-step workflows so issues are caught before they compound. Also
+  trigger when stuck, before a refactor, or after fixing a complex bug.
 permissions:
   allow:
     - Agent
@@ -49,116 +55,9 @@ Use the Agent tool with `subagent_type: code-reviewer`, passing the template bel
 
 **Agent prompt template:**
 
-```
-# Code Review Agent
-
-You are reviewing code changes for production readiness.
-
-**Your task:**
-1. Review {WHAT_WAS_IMPLEMENTED}
-2. Compare against {PLAN_OR_REQUIREMENTS}
-3. Check code quality, architecture, testing
-4. Categorize issues by severity
-5. Assess production readiness
-
-## What Was Implemented
-
-{DESCRIPTION}
-
-## Requirements/Plan
-
-{PLAN_REFERENCE}
-
-## Git Range to Review
-
-**Base:** {BASE_SHA}
-**Head:** {HEAD_SHA}
-
-\`\`\`bash
-git diff --stat {BASE_SHA}..{HEAD_SHA}
-git diff {BASE_SHA}..{HEAD_SHA}
-\`\`\`
-
-## Review Checklist
-
-**Code Quality:**
-- Clean separation of concerns?
-- Proper error handling?
-- Type safety (if applicable)?
-- DRY principle followed?
-- Edge cases handled?
-
-**Architecture:**
-- Sound design decisions?
-- Scalability considerations?
-- Performance implications?
-- Security concerns?
-
-**Testing:**
-- Tests actually test logic (not mocks)?
-- Edge cases covered?
-- Integration tests where needed?
-- All tests passing?
-
-**Requirements:**
-- All plan requirements met?
-- Implementation matches spec?
-- No scope creep?
-- Breaking changes documented?
-
-**Production Readiness:**
-- Migration strategy (if schema changes)?
-- Backward compatibility considered?
-- Documentation complete?
-- No obvious bugs?
-
-## Output Format
-
-### Strengths
-[What's well done? Be specific.]
-
-### Issues
-
-#### Critical (Must Fix)
-[Bugs, security issues, data loss risks, broken functionality]
-
-#### Important (Should Fix)
-[Architecture problems, missing features, poor error handling, test gaps]
-
-#### Minor (Nice to Have)
-[Code style, optimization opportunities, documentation improvements]
-
-**For each issue:**
-- File:line reference
-- What's wrong
-- Why it matters
-- How to fix (if not obvious)
-
-### Recommendations
-[Improvements for code quality, architecture, or process]
-
-### Assessment
-
-**Ready to merge?** [Yes/No/With fixes]
-
-**Reasoning:** [Technical assessment in 1-2 sentences]
-
-## Critical Rules
-
-**DO:**
-- Categorize by actual severity (not everything is Critical)
-- Be specific (file:line, not vague)
-- Explain WHY issues matter
-- Acknowledge strengths
-- Give clear verdict
-
-**DON'T:**
-- Say "looks good" without checking
-- Mark nitpicks as Critical
-- Give feedback on code you didn't review
-- Be vague ("improve error handling")
-- Avoid giving a clear verdict
-```
+Read `references/reviewer-prompt.md` for the full agent prompt template. Fill in the placeholders
+(`{WHAT_WAS_IMPLEMENTED}`, `{PLAN_OR_REQUIREMENTS}`, `{BASE_SHA}`, `{HEAD_SHA}`, `{DESCRIPTION}`)
+and use it verbatim as the prompt passed to the `code-reviewer` subagent.
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
