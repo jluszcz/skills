@@ -2,12 +2,13 @@
 name: rip-rename
 permissions:
   allow:
-    - Bash(find*)
-    - Bash(stat*)
-    - Bash(ls*)
-    - Bash(mkdir*)
-    - Bash(mv*)
-    - Bash(rmdir*)
+    - Bash(find:*)
+    - Bash(stat:*)
+    - Bash(ls:*)
+    - Bash(mkdir:*)
+    - Bash(mv:*)
+    - Bash(rmdir:*)
+    - Bash(echo:*)
 description: >
   Rename ripped TV show disc files into properly named episode files using a disc/episode listing
   (from a photo/image of the disc case or a typed list). Use this skill whenever the user wants to
@@ -38,6 +39,47 @@ They will also tell you (or you should ask):
 **Collect all four pieces of information before scanning the filesystem.** If any are missing,
 ask for them upfront rather than mid-process.
 
+### Deriving and confirming the show name
+
+The show name goes into every output filename, so getting it right matters — and the folder names
+left by ripping tools are a poor source for it. Those tools replace characters that filesystems
+dislike, so `Star Trek: The Next Generation` becomes a folder like
+`Star Trek- The Next Generation Season 3 Disc 1` — that `-` is a sanitized colon. Copy the folder
+name straight into filenames and you get `Star Trek- The Next Generation - s03e01.mkv`, with a
+dangling hyphen that media servers (Plex, Jellyfin) won't match cleanly.
+
+So derive a **clean** show name rather than inheriting the folder's punctuation:
+- Strip the `Season N` / `Disc N` portion.
+- **Drop colons entirely** — `Star Trek: The Next Generation` → `Star Trek The Next Generation`.
+  This matches how media servers expect titles and avoids colon issues on macOS filesystems.
+- Collapse the `- ` / `_ ` artifacts those sanitized characters leave behind, and trim doubled
+  spaces.
+
+Then show the user the exact name and a sample filename, and confirm before building the plan:
+
+> "I'll name the files like `Star Trek The Next Generation - s03e01.mkv` — good?"
+
+A one-line confirmation here prevents renaming a whole season wrong.
+
+## Running shell commands
+
+This skill is pre-approved to run `find`, `stat`, `ls`, `mkdir`, `mv`, `rmdir`, and `echo` without
+prompting. To keep the **whole** workflow prompt-free, build commands only from those binaries —
+the permission system checks each segment of a compound command independently and re-prompts the
+moment it sees anything else (a pipe to another tool, a loop, a variable assignment). The earlier
+version of this skill leaned on `for` loops, `set -e`, `$dest` variables, and `| sort`, and every
+one of those forced a permission prompt.
+
+Concretely:
+- **No pipes to other tools** (`| sort`, `| awk`, `| grep`). Run the `find` / `stat` on its own and
+  do the sorting, filtering, and median yourself from the output — that work belongs in your head
+  and in the plan, not in a shell pipeline.
+- **No `for` / `while` / `if` loops, and no `set -e`.** Control flow is opaque to the matcher and
+  always prompts. Glob across folders in a single `stat` / `mv` call instead of looping, and chain
+  steps with `&&` — which also stops on the first failure, so `set -e` isn't needed.
+- **No shell variables.** `dest="…"; mv a "$dest"` prompts because the assignment isn't an approved
+  command. Write the full literal paths into each `mv`.
+
 ## Step 1: Parse the Episode Listing
 
 If given an image, read it carefully — extract every episode title listed under each disc heading,
@@ -65,168 +107,159 @@ Only proceed once every disc heading and every episode title is confirmed.
 ## Step 2: Find Source Directories
 
 Look in the source directory for folders matching the disc pattern. Common patterns:
+- `Show Name Season 1 Disc 1`, `Show Name Season 1 Disc 2`, ...
 - `SHOW NAME S1 D1`, `SHOW NAME S1 D2`, ...
-- `Show Name Season 1 Disc 1`, ...
 - `S01D01`, `S01D02`, ...
 
 ```bash
-find "<source_dir>" -maxdepth 1 -type d -iname "*D[0-9]*" | sort
+find "<source_dir>" -maxdepth 1 -type d -iname "*disc*"
 ```
 
-List the **episode files** in each disc directory. Episode files are video files (`.mkv`, `.mp4`,
-`.m2ts`) that are **at least 200 MB** — this excludes menu tracks, trailers, and featurettes.
+For the compact forms (`S1 D1`, `S01D01`), use `-iname "*d[0-9]*"` instead. If neither pattern fits
+the folder names you see, drop the `-iname` filter, list all directories, and pick out the disc
+folders yourself. Order the discs numerically when you build the plan (the output isn't sorted, and
+piping to `sort` would trigger a prompt).
+
+## Step 3: List and Size the Episode Files
+
+Get byte-exact sizes for every video file across all disc folders in a **single** `stat` call —
+the glob expands to every match, so you don't need a loop:
 
 ```bash
-find "<source_dir>/DISC FOLDER NAME" -maxdepth 1 -type f \( -iname "*.mkv" -o -iname "*.mp4" -o -iname "*.m2ts" \) | sort
-```
-
-Then filter by size (bytes), keeping only files ≥ 200 MB (209715200 bytes):
-
-```bash
-# macOS
-stat -f "%z %N" "<source_dir>/DISC FOLDER NAME"/*.mkv | awk '$1 >= 209715200 {print $2}' | sort
+# macOS — prints size in bytes then full path
+stat -f "%z %N" "<source_dir>"/*Disc*/*.mkv 2>/dev/null
 
 # Linux
-stat -c "%s %n" "<source_dir>/DISC FOLDER NAME"/*.mkv | awk '$1 >= 209715200 {print $2}' | sort
+stat -c "%s %n" "<source_dir>"/*Disc*/*.mkv 2>/dev/null
 ```
 
-Files may be named `title_t00.mkv`, `title_t01.mkv`, etc., or may carry a show-name prefix like
+Adjust the folder glob (`*Disc*`, `*D[0-9]*`, …) to match the real names, and add `*.mp4` / `*.m2ts`
+globs to the same command if those extensions are present. The `2>/dev/null` suppresses errors for
+globs that match nothing.
+
+From this one listing you can do everything that follows — no per-disc loop needed.
+
+**Filter to episode files.** Episode files are at least **200 MB** (209,715,200 bytes); anything
+smaller is a menu, trailer, or featurette. **Explicitly report what you excluded** so gaps in track
+numbering (e.g. a missing `t01` between `t00` and `t02`) aren't a mystery:
+
+> "Skipped as menus/featurettes (<200 MB): Disc 1/t00.mkv, Disc 5/t01.mkv …"
+
+If nothing was excluded, say so.
+
+Files may be named `title_t00.mkv`, `title_t01.mkv`, etc., or carry a show-name prefix like
 `Show Name Season 1 Disc 1_t03.mkv`. The numeric suffix determines episode order on that disc
 regardless of the prefix.
 
-**After filtering, explicitly report any excluded files** so the user can see what was skipped:
+**Stop and tell the user if** fewer disc folders are found than the listing specifies, or the number
+of episode-sized files on a disc doesn't match the episode count for that disc. Do not proceed until
+the user clarifies.
 
-> "Skipped as menus/featurettes (<200 MB): Disc 1/t00.mkv, Disc 2/t02.mkv, Disc 5/t01.mkv …"
+**Report sizes in decimal GB** (bytes ÷ 1,000,000,000) consistently, so the plan and your narration
+agree — don't mix GB and GiB.
 
-If no files were excluded, say so.
+### Check for multi-episode (oversized) files
 
-**Stop and tell the user if:**
-- Fewer disc folders are found than the listing specifies (e.g., listing has 6 discs but only 5
-  folders exist)
-- The number of episode-sized files on a disc doesn't match the episode count for that disc in the
-  listing
+Calculate the **median** episode-file size (in bytes): collect the sizes, sort them, take the middle
+value (or the average of the two middle values if the count is even).
 
-Do not proceed until the user clarifies.
+If any file is **1.7× or more** the median, it may span multiple episodes. Estimate the count by
+rounding to the nearest whole multiple (~2× → 2 episodes, ~3× → 3 episodes, …) and **stop to ask**:
 
-## Step 3: Check File Sizes for Multi-Episode Files
-
-Get byte-exact sizes for all episode-sized files across every disc:
-
-```bash
-# macOS — prints size in bytes then filename
-stat -f "%z %N" "<source_dir>/DISC FOLDER"/*.mkv
-
-# Linux
-stat -c "%s %n" "<source_dir>/DISC FOLDER"/*.mkv
-```
-
-Calculate the **median file size** (in bytes) across all episode files:
-1. Collect all sizes into a list
-2. Sort the list numerically
-3. Take the middle value (or average of the two middle values if the count is even)
-
-If any file is **1.7× or more** the median size, it may span multiple episodes.
-
-Estimate the episode count for each oversized file by rounding to the nearest whole multiple:
-- ~2× median → likely 2 episodes
-- ~3× median → likely 3 episodes
-- etc.
-
-For each oversized file, **stop and ask the user**:
-
-> "The file `title_t02.mkv` in Disc 3 is about 3× the size of other episodes (~6.3 GB vs ~2.1 GB
+> "The file `title_t02.mkv` in Disc 3 is about 3× the size of the others (~6.3 GB vs ~2.1 GB
 > median). Should this be treated as a multi-episode file?
-> - **Single** → `Show - s01e09.mkv` (one episode number used)
-> - **Double** → `Show - s01e09-e10.mkv` (two episode numbers consumed, next episode becomes e11)
-> - **Triple** → `Show - s01e09-e11.mkv` (three episode numbers consumed, next episode becomes e12)"
+> - **Single** → `Show - s01e09.mkv`
+> - **Double** → `Show - s01e09-e10.mkv` (next episode becomes e11)
+> - **Triple** → `Show - s01e09-e11.mkv` (next episode becomes e12)"
 
-Present only the options that make sense given the file size. Wait for the user's answer before
-proceeding. The episode counter advances by the chosen count, and subsequent episodes shift up
-accordingly.
+Present only the options that fit the size. The episode counter advances by the chosen count, and
+later episodes shift up accordingly.
+
+### Flag files that are suspiciously small, too
+
+The 200 MB floor only catches obvious menus. A featurette, recap, or "play all" stub can clear
+200 MB yet be nowhere near a real episode — e.g. a 768 MB file sitting beside 8 GB episodes. These
+also slip past the count check: if a real episode wasn't ripped but a featurette was, the per-disc
+count can still match by coincidence and the whole mapping silently shifts by one.
+
+So after computing the median, also flag any file **below ~0.5× the median** (while still over
+200 MB) as a likely non-episode. Real episodes in a season cluster tightly — often within 1.1× of
+each other — so a genuine episode rarely trips this. Don't auto-drop it (a short episode is
+possible) — **stop and ask**:
+
+> "`…_t04.mkv` in Disc 1 is only 768 MB — about 0.09× the ~8.6 GB median of the other files. That's
+> almost certainly a featurette, not an episode. Exclude it, or is it a genuinely short episode?"
 
 ## Step 4: Build the Rename Plan
 
 Construct the full mapping of source path → destination filename. Episode numbering is sequential
 across all discs, starting at e01.
 
-Output format: `<Show Name> - s<SS>e<EE>.mkv`
+Output format: `<Clean Show Name> - s<SS>e<EE>.mkv`
+- Show name cleaned per the rules above (colon dropped, no sanitized-character artifacts)
 - Season number zero-padded to 2 digits: `s01`, `s02`
 - Episode number zero-padded to 2 digits: `e01`, `e09`, `e10`
 - Multi-episode file: `s01e09-e10.mkv` (double), `s01e09-e11.mkv` (triple), etc.
 
-Show the user the full plan before executing. For each file include the size and, for
-multi-episode files, the episode count rationale:
+Show the user the full plan before executing. Include each file's size and, for multi-episode
+files, the episode-count rationale:
 
 ```
-Disc 1/title_t00.mkv  (2.1 GB)      →  Show Name - s01e01.mkv  (Episode A)
-Disc 1/title_t01.mkv  (2.0 GB)      →  Show Name - s01e02.mkv  (Episode B)
-Disc 1/title_t02.mkv  (8.2 GB, 2×)  →  Show Name - s01e03-e04.mkv  (Episode C + D)
-Disc 2/title_t00.mkv  (2.1 GB)      →  Show Name - s01e05.mkv  (Episode E)
+Disc 1/title_t00.mkv  (2.1 GB)      →  Star Trek The Next Generation - s01e01.mkv  (Episode A)
+Disc 1/title_t01.mkv  (2.0 GB)      →  Star Trek The Next Generation - s01e02.mkv  (Episode B)
+Disc 1/title_t02.mkv  (8.2 GB, 2×)  →  Star Trek The Next Generation - s01e03-e04.mkv  (Episode C + D)
+Disc 2/title_t00.mkv  (2.1 GB)      →  Star Trek The Next Generation - s01e05.mkv  (Episode E)
 ...
 ```
 
 ## Step 5: Duplicate Check
 
-Before moving any files, verify the destination directory has no conflicts by running a real shell
-check for each planned destination file:
+Before moving anything, list what's already in the destination and compare against your planned
+filenames:
 
 ```bash
-conflicts=0
-for dest in \
-  "<destination_dir>/Show Name - s01e01.mkv" \
-  "<destination_dir>/Show Name - s01e02.mkv" \
-  "<destination_dir>/Show Name - s01e03.mkv"; do
-  if [ -e "$dest" ]; then
-    echo "CONFLICT: $dest already exists"
-    conflicts=1
-  fi
-done
-if [ "$conflicts" -eq 1 ]; then
-  echo "Stopping — resolve conflicts before proceeding"
-fi
+ls "<destination_dir>/" 2>/dev/null
 ```
 
-Generate this script with the actual planned destination paths filled in. If **any** conflict is
-found, **stop entirely** — do not move any files. Report which files conflict and ask the user how
-to proceed.
+If the directory doesn't exist yet (the command prints nothing or an error), there are no conflicts.
+If **any** planned filename already appears in the listing, **stop entirely** — do not move any
+files. Report which files conflict and ask the user how to proceed. (Comparing the listing yourself
+keeps this to a single approved `ls`; a `for`/`if` loop would trigger a prompt.)
 
 ## Step 6: Create Destination and Execute
 
-Emit **all moves as a single bash script** in one tool call. This is much faster than one call per
-file:
+Emit **all moves as one `&&`-chained command** — every segment is a `mkdir`, `mv`, or `echo`, so the
+whole thing runs without a prompt, and `&&` stops the chain on the first failure (no `set -e`
+needed). Use **full literal paths**, not variables:
 
 ```bash
-set -e
-mkdir -p "<destination_dir>"
-mv "<source_dir>/DISC FOLDER 1/prefix_t00.mkv" "<destination_dir>/Show Name - s01e01.mkv" && echo "Moved: s01e01 (Episode A)"
-mv "<source_dir>/DISC FOLDER 1/prefix_t01.mkv" "<destination_dir>/Show Name - s01e02.mkv" && echo "Moved: s01e02 (Episode B)"
-mv "<source_dir>/DISC FOLDER 1/prefix_t02.mkv" "<destination_dir>/Show Name - s01e03-e04.mkv" && echo "Moved: s01e03-e04 (Episode C + D)"
+mkdir -p "<destination_dir>" && \
+mv "<source_dir>/DISC FOLDER 1/prefix_t00.mkv" "<destination_dir>/Show Name - s01e01.mkv" && echo "Moved: s01e01 (Episode A)" && \
+mv "<source_dir>/DISC FOLDER 1/prefix_t01.mkv" "<destination_dir>/Show Name - s01e02.mkv" && echo "Moved: s01e02 (Episode B)" && \
+mv "<source_dir>/DISC FOLDER 1/prefix_t02.mkv" "<destination_dir>/Show Name - s01e03-e04.mkv" && echo "Moved: s01e03-e04 (Episode C + D)" && \
 mv "<source_dir>/DISC FOLDER 2/prefix_t00.mkv" "<destination_dir>/Show Name - s01e05.mkv" && echo "Moved: s01e05 (Episode E)"
-# ... one mv && echo per file, all in the same script
+# ... one `mv … && echo …` per file, all in the same chained command
 ```
 
-Do not split into multiple tool calls.
+Keep it to a single tool call — do not split into one call per file, and do not introduce a loop or
+variables (either would force a permission prompt and defeat the point).
 
 ## Step 7: Clean Up Empty Disc Folders
 
-**Only run this step if the Step 6 script exited successfully (exit code 0).** With `set -e`, a failed `mv` will abort the script early — if that happened, report the failure to the user and stop rather than proceeding to cleanup.
+**Only run this if the Step 6 command exited successfully (exit code 0).** Because the chain is
+joined with `&&`, a failed `mv` aborts the rest — if that happened, report the failure and stop
+rather than cleaning up.
 
-After all moves succeed, remove any source disc folders that are now empty:
+After the moves succeed, remove the now-empty disc folders with a single `rmdir` that lists every
+folder as an argument:
 
 ```bash
-for dir in \
-  "<source_dir>/DISC FOLDER 1" \
-  "<source_dir>/DISC FOLDER 2"; do
-  if rmdir "$dir" 2>/dev/null; then
-    echo "Removed empty folder: $dir"
-  else
-    echo "Kept (not empty): $dir"
-  fi
-done
+rmdir "<source_dir>/DISC FOLDER 1" "<source_dir>/DISC FOLDER 2" "<source_dir>/DISC FOLDER 3" "<source_dir>/DISC FOLDER 4" "<source_dir>/DISC FOLDER 5" "<source_dir>/DISC FOLDER 6"
 ```
 
-`rmdir` only removes a directory if it is empty, so this is safe even if menus or featurettes
-remain. Do not use `rm -rf`.
+`rmdir` only removes a directory if it is empty, and it skips (with a harmless error) any folder that
+still holds menus or featurettes, continuing to the rest — so this is safe without `rm -rf` and
+without a loop. Report which folders were removed and which were kept.
 
 ## Step 8: Verify
 
@@ -238,19 +271,24 @@ Confirm all expected files are present and print a summary of what was done.
 
 ## Important Rules
 
-- **Never overwrite** — always check for conflicts before moving anything
+- **Derive a clean show name and confirm it** — drop colons and the `- ` / `_ ` artifacts that
+  ripping tools leave behind, then confirm the exact name with the user before building filenames,
+  so a whole season isn't renamed with a dangling hyphen
+- **Keep the run prompt-free** — build commands only from the approved binaries (`find`, `stat`,
+  `ls`, `mkdir`, `mv`, `rmdir`, `echo`); avoid pipes to other tools, `for`/`if` loops, `set -e`, and
+  shell variables, since each forces a permission prompt
+- **Never overwrite** — always check the destination for conflicts before moving anything
 - **Never guess episode order** — use the listing from the image/text exactly
 - **Never guess unreadable image text** — ask for clarification on any blurry, cut-off, or
   ambiguous text before building the episode mapping
 - **Ask about multi-episode files** before building the rename plan, not after
-- If source files are missing or the count doesn't match the episode listing, tell the user
-  before proceeding
-- If the user provides a partial listing (e.g., only some discs), only rename those discs
-- **Skip small files** — any file under 200 MB is not an episode (it's a menu, trailer, or
-  featurette); never assign it an episode number
-- **Always disclose filtered files** — explicitly tell the user which files were excluded and why,
-  so gaps in track numbering (e.g., t01 missing between t00 and t02) are not a mystery
-- **Batch all moves into one script** — do not issue one tool call per file; emit a single bash
-  script with all mv commands
-- **Never force-remove source folders** — use `rmdir` (not `rm -rf`) so only empty directories
-  are deleted after the rename
+- **Flag suspiciously small files** — a file over 200 MB but below ~0.5× the median is probably a
+  featurette, not an episode; ask before excluding it
+- If source files are missing or the count doesn't match the episode listing, tell the user before
+  proceeding
+- If the user provides a partial listing (e.g. only some discs), only rename those discs
+- **Skip small files** — anything under 200 MB is a menu, trailer, or featurette, never an episode
+- **Always disclose filtered files** — explicitly tell the user which files were excluded and why
+- **Batch all moves into one `&&`-chained command** — do not issue one tool call per file
+- **Never force-remove source folders** — use `rmdir` (not `rm -rf`) so only empty directories are
+  deleted after the rename
