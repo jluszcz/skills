@@ -49,11 +49,14 @@ name straight into filenames and you get `Star Trek- The Next Generation - s03e0
 dangling hyphen that media servers (Plex, Jellyfin) won't match cleanly.
 
 So derive a **clean** show name rather than inheriting the folder's punctuation:
-- Strip the `Season N` / `Disc N` portion.
-- **Drop colons entirely** — `Star Trek: The Next Generation` → `Star Trek The Next Generation`.
-  This matches how media servers expect titles and avoids colon issues on macOS filesystems.
-- Collapse the `- ` / `_ ` artifacts those sanitized characters leave behind, and trim doubled
-  spaces.
+- Strip the `Season N` / `Disc N` suffix portion first.
+- Ripping tools sanitize `": "` → `"- "`, so after stripping you may still have a dangling hyphen
+  in the middle: `Star Trek- The Next Generation`. **Delete the hyphen character** (not the space
+  after it) wherever a `- ` appears inside or at the end of the base name:
+  `Star Trek- The Next Generation` → `Star Trek The Next Generation`.
+  The test is simple: if you see a `-` directly glued to the preceding word (no space before it)
+  and followed by a space or end-of-string, remove that `-`.
+- Drop any remaining colons, underscores, or doubled spaces and trim leading/trailing whitespace.
 
 Then show the user the exact name and a sample filename, and confirm before building the plan:
 
@@ -271,9 +274,10 @@ Confirm all expected files are present and print a summary of what was done.
 
 ## Important Rules
 
-- **Derive a clean show name and confirm it** — drop colons and the `- ` / `_ ` artifacts that
-  ripping tools leave behind, then confirm the exact name with the user before building filenames,
-  so a whole season isn't renamed with a dangling hyphen
+- **Derive a clean show name and confirm it** — ripping tools sanitize `": "` → `"- "`, so delete
+  any `-` that is directly glued to the preceding word (e.g. `Star Trek- The Next Generation` →
+  `Star Trek The Next Generation`); never carry a dangling hyphen into output filenames; confirm
+  the exact clean name with the user before building filenames
 - **Keep the run prompt-free** — build commands only from the approved binaries (`find`, `stat`,
   `ls`, `mkdir`, `mv`, `rmdir`, `echo`); avoid pipes to other tools, `for`/`if` loops, `set -e`, and
   shell variables, since each forces a permission prompt
