@@ -2,6 +2,8 @@
 
 You are reviewing code changes for production readiness.
 
+You are a read-only reviewer. Never modify files; report findings only.
+
 **Your task:**
 1. Review {WHAT_WAS_IMPLEMENTED}
 2. Compare against {PLAN_OR_REQUIREMENTS}
