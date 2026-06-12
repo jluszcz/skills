@@ -6,13 +6,12 @@ description: >
   auto-detecting scope from the diff, generating a semantic commit message, intelligent staging,
   and enforcing git safety rules.
 license: MIT
-permissions:
-  allow:
-    - Bash(git status*)
-    - Bash(git diff*)
-    - Bash(git log*)
-    - Bash(git add*)
-    - Bash(git commit*)
+allowed-tools:
+  - Bash(git status:*)
+  - Bash(git diff:*)
+  - Bash(git log:*)
+  - Bash(git add:*)
+  - Bash(git commit:*)
 ---
 
 # Commit

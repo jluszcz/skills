@@ -7,12 +7,13 @@ description: >
   implementing major features, or before merging. Always trigger after each significant
   implementation step in multi-step workflows so issues are caught before they compound. Also
   trigger when stuck, before a refactor, or after fixing a complex bug.
-permissions:
-  allow:
-    - Agent
-    - Bash(git log*)
-    - Bash(git rev-parse*)
-    - Bash(git diff*)
+allowed-tools:
+  - Agent
+  - Read
+  - Bash(git log:*)
+  - Bash(git rev-parse:*)
+  - Bash(git diff:*)
+  - Bash(git show:*)
 ---
 
 # Code Review
