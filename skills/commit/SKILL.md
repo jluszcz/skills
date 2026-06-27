@@ -4,12 +4,14 @@ description: >
   Create a git commit. Trigger whenever the user asks to commit — "commit", "/commit", "make a
   commit", "stage and commit", "commit my changes", "commit this", "save my work to git". Handles
   auto-detecting scope from the diff, generating a semantic commit message, intelligent staging,
-  and enforcing git safety rules.
+  checking that documentation (README.md, CLAUDE.md, etc.) is up to date, and enforcing git safety
+  rules.
 license: MIT
 allowed-tools:
   - Bash(git status:*)
   - Bash(git diff:*)
   - Bash(git log:*)
+  - Bash(git ls-files:*)
   - Bash(git add:*)
   - Bash(git commit:*)
 ---
@@ -64,7 +66,30 @@ git add src/components/*
 
 **Never commit secrets** (.env, credentials.json, private keys).
 
-### 3. Generate Commit Message
+### 3. Check Documentation is Up to Date
+
+Before generating the message, verify that documentation reflects the changes being committed. Compare the staged diff against project docs and flag anything now stale.
+
+```bash
+# Find docs that may need updating
+git ls-files '*README*' '*CLAUDE.md' 'docs/**' '*.md'
+```
+
+Check whether the diff invalidates any of:
+
+- **README.md** — installation/usage/examples, feature lists, supported options, badges, project structure.
+- **CLAUDE.md** (and `AGENTS.md`, `.cursorrules`, etc.) — build/test/lint commands, conventions, architecture notes.
+- **Other equivalent docs** — `docs/`, `CONTRIBUTING.md`, `CHANGELOG.md`, API docs, config samples (`.env.example`), inline help/usage text, and version numbers in manifests.
+
+Triggers that usually require a doc update:
+
+- Added/removed/renamed a command, flag, script, env var, or public API.
+- Changed install steps, dependencies, or supported versions.
+- Changed default behavior or configuration described in docs.
+
+If docs are stale, update them and stage the changes so they land in the **same commit** as the code they describe. If a doc change is genuinely out of scope, tell the user rather than silently skipping it.
+
+### 4. Generate Commit Message
 
 Analyze the diff and recent commit history to determine:
 
@@ -73,7 +98,7 @@ Analyze the diff and recent commit history to determine:
 - **Body**: Include when the change is complex, has multiple parts, or the "why" isn't obvious from the description alone. Simple, self-evident changes don't need a body.
 - **Length**: First line at most 80 characters; wrap body at 80 characters.
 
-### 4. Execute Commit
+### 5. Execute Commit
 
 ```bash
 # Single line (for simple, self-evident changes)
@@ -90,7 +115,7 @@ EOF
 )"
 ```
 
-### 5. Verify
+### 6. Verify
 
 ```bash
 git log --oneline -1
@@ -106,6 +131,7 @@ Confirm the commit landed correctly.
 - Reference issues: `Closes #123`, `Refs #456`
 - Keep description under 80 characters
 - Match scope style and casing from recent commits in the repo
+- Keep docs (README.md, CLAUDE.md, etc.) in sync — commit doc updates alongside the code that changed them
 
 ## Git Safety Protocol
 

@@ -11,6 +11,7 @@ Analyzes your staged/unstaged changes, generates a semantic commit message, and 
 - Infers scope from the diff
 - Matches message style from recent commits
 - Stages files intelligently for logical grouping
+- Checks that documentation (README.md, CLAUDE.md, etc.) is up to date before committing
 - Follows git safety protocols (no `--no-verify`, no force pushes)
 
 ### `/code-review`
