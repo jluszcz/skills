@@ -25,14 +25,17 @@ Create standardized, semantic git commits. Analyze the actual diff to determine 
 ## Commit Format
 
 ```
-[scope]: <description>
+<type>(<scope>): <description>
 
 [optional body]
 
 [optional footer(s)]
 ```
 
-Scope is optional but encouraged when the change is clearly scoped to a module, component, or area.
+Common types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`. Scope is optional but
+encouraged when the change is clearly scoped to a module, component, or area. Match the repo's
+recent history: if its commits use type prefixes (`feat(auth): …`), use them; if they don't
+(`auth: …` or plain descriptions), don't introduce them.
 
 ## Workflow
 
@@ -93,6 +96,7 @@ If docs are stale, update them and stage the changes so they land in the **same 
 
 Analyze the diff and recent commit history to determine:
 
+- **Type**: feat, fix, chore, etc. — only if recent commits use type prefixes.
 - **Scope**: What area/module is affected? Match casing/style from recent commits.
 - **Description**: One-line summary of what changed (present tense, imperative mood)
 - **Body**: Include when the change is complex, has multiple parts, or the "why" isn't obvious from the description alone. Simple, self-evident changes don't need a body.
@@ -102,18 +106,15 @@ Analyze the diff and recent commit history to determine:
 
 ```bash
 # Single line (for simple, self-evident changes)
-git commit -m "scope: description"
+git commit -m "type(scope): description"
 
-# Multi-line with body/footer (for complex changes)
-git commit -m "$(cat <<'EOF'
-scope: description
-
-Body explaining why or what isn't obvious from the title.
-
-Closes #123
-EOF
-)"
+# Multi-line with body/footer (for complex changes) — each -m adds a paragraph
+git commit -m "type(scope): description" -m "Body explaining why or what isn't obvious from the title." -m "Closes #123"
 ```
+
+Use multiple `-m` flags rather than a heredoc or `$()` substitution — command substitution
+breaks the `Bash(git commit:*)` permission match and forces a prompt the allowlist exists to
+avoid.
 
 ### 6. Verify
 
@@ -140,4 +141,4 @@ Confirm the commit landed correctly.
 - NEVER skip hooks (`--no-verify`) unless user asks
 - NEVER force push to main/master
 - NEVER add Co-Authored-By trailers or any reference to being AI-generated in commit messages
-- If commit fails due to hooks, fix and create NEW commit (don't amend)
+- If a hook fails or modifies files, fix the underlying issue, restage, and run a fresh `git commit` — never amend, never `--no-verify`
