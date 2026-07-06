@@ -197,11 +197,14 @@ possible) — **stop and ask**:
 Construct the full mapping of source path → destination filename. Episode numbering is sequential
 across all discs, starting at e01.
 
-Output format: `<Clean Show Name> - s<SS>e<EE>.mkv`
+Output format: `<Clean Show Name> - s<SS>e<EE>.<ext>`
 - Show name cleaned per the rules above (colon dropped, no sanitized-character artifacts)
 - Season number zero-padded to 2 digits: `s01`, `s02`
 - Episode number zero-padded to 2 digits: `e01`, `e09`, `e10`
 - Multi-episode file: `s01e09-e10.mkv` (double), `s01e09-e11.mkv` (triple), etc.
+- **Keep each source file's extension**: a `.mp4` or `.m2ts` rip stays `.mp4`/`.m2ts` — never
+  relabel it `.mkv`. The extension describes the container format, and a mismatched one breaks
+  some players and media servers.
 
 Show the user the full plan before executing. Include each file's size and, for multi-episode
 files, the episode-count rationale:
@@ -280,6 +283,8 @@ Confirm all expected files are present and print a summary of what was done.
 - **Keep the run prompt-free** — build commands only from the approved binaries (`find`, `stat`,
   `ls`, `mkdir`, `mv`, `rmdir`, `echo`); avoid pipes to other tools, `for`/`if` loops, `set -e`, and
   shell variables, since each forces a permission prompt
+- **Preserve the source extension** — the destination filename keeps the source file's
+  extension (`.mkv`, `.mp4`, `.m2ts`); never relabel the container
 - **Never overwrite** — always check the destination for conflicts before moving anything
 - **Never guess episode order** — use the listing from the image/text exactly
 - **Never guess unreadable image text** — ask for clarification on any blurry, cut-off, or

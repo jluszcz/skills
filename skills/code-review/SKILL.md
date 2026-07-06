@@ -43,22 +43,27 @@ git rev-parse HEAD           # → HEAD_SHA
 git log --oneline origin/main..HEAD
 ```
 
+If `origin/main` doesn't exist (repo uses `master`, no remote, or the branch isn't fetched),
+substitute the appropriate base branch — or ask the user what to review against.
+
 **2. Dispatch the `code-reviewer` agent:**
 
-Use the Agent tool with `subagent_type: code-reviewer`, passing the template below (with placeholders filled in) as the prompt.
+Use the Agent tool with `subagent_type: code-reviewer` (namespaced as `jluszcz:code-reviewer`
+when installed via the plugin), passing the template below (with placeholders filled in) as the
+prompt.
 
 **Placeholders:**
-- `{WHAT_WAS_IMPLEMENTED}` - What you just built
+- `{WHAT_WAS_IMPLEMENTED}` - What you just built (a sentence or two)
 - `{PLAN_REFERENCE}` - What it should do (plan doc, requirements, task description)
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
-- `{DESCRIPTION}` - Brief summary
 
 **Agent prompt template:**
 
 Read `references/reviewer-prompt.md` for the full agent prompt template. Fill in the placeholders
-(`{WHAT_WAS_IMPLEMENTED}`, `{PLAN_OR_REQUIREMENTS}`, `{BASE_SHA}`, `{HEAD_SHA}`, `{DESCRIPTION}`)
-and use it verbatim as the prompt passed to the `code-reviewer` subagent.
+(`{WHAT_WAS_IMPLEMENTED}`, `{PLAN_REFERENCE}`, `{BASE_SHA}`, `{HEAD_SHA}`) and use it verbatim as
+the prompt passed to the `code-reviewer` subagent. The template only supplies context — the review
+rubric and output format live in the agent's own definition, so there is one source of truth.
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
@@ -73,15 +78,15 @@ and use it verbatim as the prompt passed to the `code-reviewer` subagent.
 
 You: Let me request code review before proceeding.
 
-git log --oneline | grep "Task 1"   # → grab BASE_SHA from output
+git log --oneline                    # → find the Task 1 commit, grab BASE_SHA from output
 git rev-parse HEAD                   # → HEAD_SHA
 
 [Dispatch code-reviewer agent]
-  WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
+  WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index —
+    added verifyIndex() and repairIndex() covering 4 issue types
   PLAN_REFERENCE: Task 2 from plans/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
-  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
 
 [Subagent returns]:
   Strengths: Clean architecture, real tests
