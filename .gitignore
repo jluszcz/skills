@@ -1,2 +1,3 @@
 # skill-creator eval scratch workspaces
+__pycache__/
 skills/*-workspace/

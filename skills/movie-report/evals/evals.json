@@ -1,0 +1,32 @@
+{
+  "skill_name": "movie-report",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I just re-exported my data. ~/Downloads/synology.json is my Plex server export (each movie is a disc I own), the most recent letterboxd-jluszcz export folder in Downloads is my Letterboxd export, and ~/Documents/MovieList/movielist.json has my year-by-year stack-ranked movie lists. Ignoring TV, build me a taste profile, check whether my ranked lists line up with my Letterboxd stars, and recommend discs to buy (I'll blind buy). Write the reports to <OUTPUT_DIR>.",
+      "expected_output": "movie-taste-profile.md and movie-recommendations.md in the output dir: profile with rating distribution + Spearman-by-year consistency table + tier averages; tiered recommendations including blind buys; chat summary leads with the consistency verdict",
+      "files": [],
+      "assertions": [
+        "Produces both a taste-profile markdown file and a recommendations markdown file in the outputs directory",
+        "Consistency analysis reports per-year rank-vs-rating (Spearman) correlation and characterizes recent years (2022 onward) as strongly consistent — high positive correlation (~0.9 against the 2026-07-07 export; exact values are snapshot-dependent and will drift as data is re-exported)",
+        "Does not recommend purchasing movies already in the Plex library (e.g. Knives Out, Top Gun: Maverick, Parasite, and E.T. which is owned under the abbreviated title 'E.T.')",
+        "Recommendations include a blind-buy section: unseen films with a stated rationale tied to the user's demonstrated taste",
+        "TV shows are excluded from the analysis",
+        "Pre-2021 list years are flagged as having sparse rating coverage rather than presented as evidence of inconsistency"
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "quick question - do the rankings in my movie list (~/Documents/MovieList/movielist.json) actually match the star ratings i give on letterboxd? my letterboxd export is the letterboxd-jluszcz folder in ~/Downloads. curious which movies i'm most inconsistent about. put whatever you produce in <OUTPUT_DIR>",
+      "expected_output": "Consistency analysis: high Spearman (~0.9) for 2022-2026, sparse-year caveat for pre-2021, and a list of genuine mismatches (e.g. The Nice Guys ranked low/rated 4.5, Flow ranked high/rated 2.5). Should not fabricate ownership recommendations; synology.json not required",
+      "files": [],
+      "assertions": [
+        "Answers with a clear verdict: rankings and star ratings agree strongly, with recent-year correlation around 0.9",
+        "Names specific genuine mismatch films with rank-vs-rating evidence (e.g. The Nice Guys ranked low but rated 4.5, Flow ranked high but rated 2.5, The World's End)",
+        "Does not present title-collision false positives as mismatches (e.g. Road House 2024 vs 1989 rating, Suicide Squad 2016 vs The Suicide Squad 2021)",
+        "Notes that low correlations in older years reflect sparse rating coverage / later re-rating, not genuine inconsistency",
+        "Saves its analysis output to the outputs directory"
+      ]
+    }
+  ]
+}

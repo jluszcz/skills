@@ -24,6 +24,18 @@ implementation step.
 - Preserves your session context by running review in a focused subagent
 - Gives a clear merge-readiness verdict
 
+### `/movie-report`
+
+Builds a movie taste profile, a ranked-list-vs-Letterboxd-stars consistency analysis, and tiered
+disc-purchase recommendations (including blind buys) from a Plex/Synology library export, a
+Letterboxd export, and MovieList ranked lists.
+
+- Bundles a year-aware title-matching script (avoids collisions like Road House 1989/2024)
+- Computes per-year Spearman rank correlation and tier calibration (Great/Good/OK/Bad vs stars)
+- Verifies "not owned" claims against the library before recommending purchases
+- Flags streaming-only titles with no disc release
+- Ignores TV shows
+
 ### `/rip-rename`
 
 Renames ripped TV show disc files (e.g. `title_t00.mkv`) into properly named episode files
