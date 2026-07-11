@@ -1,6 +1,6 @@
 # jluszcz Claude Code Plugin
 
-A Claude Code plugin providing skills and agents for code review, git commits, and media organization.
+A Claude Code plugin providing skills for git commits and media organization.
 
 ## Skills
 
@@ -13,16 +13,6 @@ Analyzes your staged/unstaged changes, generates a semantic commit message, and 
 - Stages files intelligently for logical grouping
 - Checks that documentation (README.md, CLAUDE.md, etc.) is up to date before committing
 - Follows git safety protocols (no `--no-verify`, no force pushes)
-
-### `/code-review`
-
-Dispatches a `code-reviewer` subagent to review completed work against requirements. Designed to run after each significant
-implementation step.
-
-- Compares implementation against plan or requirements
-- Categorizes issues as Critical / Important / Minor
-- Preserves your session context by running review in a focused subagent
-- Gives a clear merge-readiness verdict
 
 ### `/movie-report`
 
@@ -47,13 +37,6 @@ Renames ripped TV show disc files (e.g. `title_t00.mkv`) into properly named epi
 - Checks for destination conflicts before moving anything
 - Skips menu tracks and featurettes (files under 200 MB)
 - Supports MKV, MP4, and M2TS sources
-
-## Agents
-
-### `code-reviewer`
-
-A Senior Code Reviewer agent used internally by the `/code-review` skill. Reviews a git diff range for plan alignment, code
-quality, architecture, and production readiness.
 
 ## Installation
 

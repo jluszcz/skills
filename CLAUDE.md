@@ -28,10 +28,6 @@ Consequences:
   `allowed-tools` (a YAML list; the older `permissions` key is unsupported — see commit `c3bdf1c`).
   Optional `references/` for docs loaded on demand and `evals/evals.json` for skill-creator test
   prompts (rip-rename has both patterns in use).
-- `agents/<name>.md` — subagent definitions. The `code-review` skill dispatches
-  `agents/code-reviewer.md`; the agent file owns the review rubric and output format, while the
-  skill's `references/reviewer-prompt.md` supplies only per-review context. Keep it that way —
-  don't duplicate the rubric back into the template.
 - `skills/*-workspace/` — gitignored scratch dirs from skill-creator eval runs; never commit them.
 
 ## Skill-Authoring Conventions
