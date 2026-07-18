@@ -4,14 +4,17 @@ description: >
   Create a git commit. Trigger whenever the user asks to commit — "commit", "/commit", "make a
   commit", "stage and commit", "commit my changes", "commit this", "save my work to git". Handles
   auto-detecting scope from the diff, generating a semantic commit message, intelligent staging,
-  checking that documentation (README.md, CLAUDE.md, etc.) is up to date, and enforcing git safety
-  rules.
+  checking that documentation (README.md, CLAUDE.md, etc.) is up to date, creating a feature branch
+  when you'd otherwise commit onto the default branch, and enforcing git safety rules.
 license: MIT
 allowed-tools:
   - Bash(git status:*)
   - Bash(git diff:*)
   - Bash(git log:*)
   - Bash(git ls-files:*)
+  - Bash(git branch:*)
+  - Bash(git symbolic-ref:*)
+  - Bash(git switch:*)
   - Bash(git add:*)
   - Bash(git commit:*)
 ---
@@ -53,6 +56,9 @@ git diff
 
 # Check recent commits to match project style
 git log --oneline -5
+
+# Note the current branch — you'll create a feature branch later if this is the default branch
+git branch --show-current
 ```
 
 ### 2. Stage Files (if needed)
@@ -102,7 +108,51 @@ Analyze the diff and recent commit history to determine:
 - **Body**: Include when the change is complex, has multiple parts, or the "why" isn't obvious from the description alone. Simple, self-evident changes don't need a body.
 - **Length**: First line at most 80 characters; wrap body at 80 characters.
 
-### 5. Execute Commit
+### 5. Create a Feature Branch if on the Default Branch
+
+Committing straight onto a project's default branch (`main`, `master`, or whatever the repo uses)
+is almost never what you want — it makes the change harder to review, harder to open a PR from, and
+harder to undo. If step 1 showed you're on the default branch, create a feature branch first. Git
+carries your staged and unstaged changes across a branch switch, so doing this after staging loses
+no work.
+
+Determine the remote's default branch:
+
+```bash
+git symbolic-ref --short refs/remotes/origin/HEAD
+```
+
+This prints something like `origin/main`. You're on the default branch when `git branch
+--show-current` matches its short name (`main` here). If that command errors — some repos don't set
+`origin/HEAD` — treat a current branch of `main` or `master` as the default.
+
+Name the branch after the commit you just wrote: take the description, drop the `type(scope):`
+prefix, lowercase it, and join the words with hyphens. `feat(auth): implement JWT auth` becomes
+`implement-jwt-auth`. Keep it to a few words and strip characters that are awkward in branch names
+(spaces, slashes, punctuation).
+
+Create the branch off the remote default and set that default as its upstream in one step:
+
+```bash
+git switch -c implement-jwt-auth -t origin/main
+```
+
+The `-t origin/main` gives the new branch a valid upstream immediately with no push, so `git
+status` and `git pull` track against the default branch. Use `origin/master` (or whatever the
+actual default is) to match the repo.
+
+If the repo has no `origin` remote or no matching remote-tracking branch, create the branch without
+tracking and tell the user its upstream will be set on their first push:
+
+```bash
+git switch -c implement-jwt-auth
+```
+
+If you're in a detached HEAD state (`git branch --show-current` prints nothing), don't guess — tell
+the user and let them decide where the commit should land. If you're already on a feature branch
+(not the default), skip this step and commit as normal.
+
+### 6. Execute Commit
 
 ```bash
 # Single line (for simple, self-evident changes)
@@ -116,7 +166,7 @@ Use multiple `-m` flags rather than a heredoc or `$()` substitution — command 
 breaks the `Bash(git commit:*)` permission match and forces a prompt the allowlist exists to
 avoid.
 
-### 6. Verify
+### 7. Verify
 
 ```bash
 git log --oneline -1
@@ -140,5 +190,6 @@ Confirm the commit landed correctly.
 - NEVER run destructive commands (`--force`, hard reset) without explicit request
 - NEVER skip hooks (`--no-verify`) unless user asks
 - NEVER force push to main/master
+- NEVER commit directly onto the default branch (main/master/…) — create a feature branch first (see step 5)
 - NEVER add Co-Authored-By trailers or any reference to being AI-generated in commit messages
 - If a hook fails or modifies files, fix the underlying issue, restage, and run a fresh `git commit` — never amend, never `--no-verify`
