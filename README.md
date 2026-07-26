@@ -45,6 +45,20 @@ from that via a repository-role bypass tied to a repo-scoped PAT, not a blanket 
 Actions — see `CLAUDE.md` for how it's wired up and the "pwn request" risk of extending that bypass to
 other workflows.
 
+### Rotating the `BUMP_VERSION_PAT` secret
+
+When the PAT nears its expiration (GitHub emails the account it's scoped to), regenerate and reset it:
+
+1. [github.com/settings/tokens?type=beta](https://github.com/settings/tokens?type=beta) → find the
+   existing fine-grained token → regenerate it (or create a new one scoped to just `jluszcz/skills`
+   with repository permission **Contents: Read and write**, then delete the old one after the secret
+   is updated).
+2. `gh secret set BUMP_VERSION_PAT --repo jluszcz/skills` — run in your own terminal so the token
+   value never passes through a Claude Code session; it prompts for hidden input.
+
+No other changes are needed — `bump-version.yml` and the ruleset bypass actor both key off the secret
+name and the account's Admin role, not the token's value.
+
 ## Installation
 
 ```shell
