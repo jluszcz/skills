@@ -8,6 +8,11 @@ description: >
   when you'd otherwise commit onto the default branch, and enforcing git safety rules.
 license: MIT
 allowed-tools:
+  # Reading and updating stale docs is part of step 3, so the file tools are
+  # needed as much as the git ones.
+  - Read
+  - Edit
+  - Glob
   - Bash(git status:*)
   - Bash(git diff:*)
   - Bash(git log:*)

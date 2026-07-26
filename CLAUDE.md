@@ -6,7 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Claude Code plugin (`jluszcz`) that is also its own marketplace: `.claude-plugin/marketplace.json`
 points at `./` as the sole plugin, and `.claude-plugin/plugin.json` defines it. It ships skills
-(`skills/<name>/SKILL.md`) and agents (`agents/<name>.md`), no application code.
+(`skills/<name>/SKILL.md`) and no application code. There is no `agents/` directory — the last agent
+was removed in `9fb1319` — though the version-bump workflow still watches that path in case one
+returns.
 
 ## Versioning — Do Not Bump Manually
 
@@ -26,8 +28,9 @@ Consequences:
 
 - `skills/<name>/SKILL.md` — one skill per directory; frontmatter `name`, `description`, and
   `allowed-tools` (a YAML list; the older `permissions` key is unsupported — see commit `c3bdf1c`).
-  Optional `references/` for docs loaded on demand and `evals/evals.json` for skill-creator test
-  prompts (rip-rename has both patterns in use).
+  Optionally `evals/evals.json` for skill-creator test prompts — `rip-rename` is the only skill
+  using it. Claude Code also supports a `references/` directory for docs loaded on demand, but no
+  skill here has one yet.
 - `skills/*-workspace/` — gitignored scratch dirs from skill-creator eval runs; never commit them.
 
 ## Skill-Authoring Conventions
@@ -37,6 +40,13 @@ stay within the prefixes granted by its `allowed-tools` (e.g. `Bash(git diff:*)`
 tools, `for`/`if` loops, shell variables, heredocs, and `$()` substitution all break the prefix
 match and force a prompt — avoid them in skill instructions and examples. `rip-rename/SKILL.md`
 documents this in depth; keep new skills consistent with it.
+
+**`allowed-tools` must cover every tool the body tells the model to use, not just the shell
+commands.** A skill that says to read a file, edit one, or look at an image needs `Read`/`Edit`/
+`Glob` listed alongside its `Bash(...)` prefixes. Both `commit` (which updates stale docs) and
+`rip-rename` (which reads a photo of a disc case) instructed work their frontmatter did not permit,
+which surfaces as a permission prompt in the middle of the task — exactly what these grants exist to
+avoid. When editing a skill body, re-read its frontmatter.
 
 ## Checks
 
