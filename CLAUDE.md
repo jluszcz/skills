@@ -24,6 +24,23 @@ Consequences:
 - After pushing to `main`, the bot adds a commit — `git pull` before pushing again.
 - Doc-only or workflow-only changes (nothing under `agents/` or `skills/`) do not trigger a bump.
 
+### Why the bot's push doesn't get blocked by branch protection
+
+`main` is covered by a repository ruleset (id `18803372`) requiring every change to go through a PR
+with a passing `claude-review` status check — `bump-version.yml`'s direct push would normally be
+rejected under that rule, the way any other direct push is. To keep working, the workflow pushes
+using the `BUMP_VERSION_PAT` secret (a PAT scoped to this repo, owned by `jluszcz`) instead of the
+default `GITHUB_TOKEN`, and the ruleset has a `RepositoryRole: Admin` bypass actor (mode `always`)
+that matches that PAT's identity. `Integration`-type bypass (exempting the GitHub Actions app
+directly) isn't an option here — GitHub only allows it on organization-owned repos, and this one is
+personal.
+
+**Pwn-request caution**: the `RepositoryRole: Admin` bypass isn't scoped to `bump-version.yml` — it
+applies to *any* push authenticated as an Admin-role identity on this repo. Don't add a workflow that
+combines a PAT/token with `contents: write` and a fork-triggerable event (e.g. `pull_request_target`
+checking out PR head content) — that's the classic "pwn request" pattern, and here it would inherit
+this same branch-protection bypass.
+
 ## Layout
 
 - `skills/<name>/SKILL.md` — one skill per directory; frontmatter `name`, `description`, and

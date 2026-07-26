@@ -38,6 +38,13 @@ Renames ripped TV show disc files (e.g. `title_t00.mkv`) into properly named epi
 - Skips menu tracks and featurettes (files under 200 MB)
 - Supports MKV, MP4, and M2TS sources
 
+## CI
+
+`main` requires PRs and a passing Claude review check. The automated version-bump workflow is exempted
+from that via a repository-role bypass tied to a repo-scoped PAT, not a blanket exemption for GitHub
+Actions — see `CLAUDE.md` for how it's wired up and the "pwn request" risk of extending that bypass to
+other workflows.
+
 ## Installation
 
 ```shell
