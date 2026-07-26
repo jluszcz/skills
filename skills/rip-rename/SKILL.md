@@ -173,7 +173,6 @@ rounding to the nearest whole multiple (~2× → 2 episodes, ~3× → 3 episodes
 
 > "The file `title_t02.mkv` in Disc 3 is about 3× the size of the others (~6.3 GB vs ~2.1 GB
 > median). Should this be treated as a multi-episode file?
-> - **Single** → `Show - s01e09.mkv`
 > - **Double** → `Show - s01e09-e10.mkv` (next episode becomes e11)
 > - **Triple** → `Show - s01e09-e11.mkv` (next episode becomes e12)"
 
