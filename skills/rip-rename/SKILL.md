@@ -1,6 +1,9 @@
 ---
 name: rip-rename
 allowed-tools:
+  # The episode listing usually arrives as a photo of the disc case, which
+  # means reading an image.
+  - Read
   - Bash(find:*)
   - Bash(stat:*)
   - Bash(ls:*)
