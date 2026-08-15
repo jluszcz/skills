@@ -5,7 +5,8 @@ description: >
   commit", "stage and commit", "commit my changes", "commit this", "save my work to git". Handles
   auto-detecting scope from the diff, generating a semantic commit message, intelligent staging,
   checking that documentation (README.md, CLAUDE.md, etc.) is up to date, creating a feature branch
-  when you'd otherwise commit onto the default branch, and enforcing git safety rules.
+  when you'd otherwise commit onto the default branch, giving a branch a missing upstream (the
+  remote default, or the parent branch when the work is stacked), and enforcing git safety rules.
 license: MIT
 # Runs as a forked subagent on Sonnet: the diff, the doc scan, and the git
 # plumbing all stay out of the caller's context, and none of it needs Opus.
@@ -138,13 +139,11 @@ Analyze the diff and recent commit history to determine:
 - **Body**: Include when the change is complex, has multiple parts, or the "why" isn't obvious from the description alone. Simple, self-evident changes don't need a body.
 - **Length**: First line at most 80 characters; wrap body at 80 characters.
 
-### 5. Create a Feature Branch if on the Default Branch
+### 5. Settle the Branch and Its Upstream
 
-Committing straight onto a project's default branch (`main`, `master`, or whatever the repo uses)
-is almost never what you want — it makes the change harder to review, harder to open a PR from, and
-harder to undo. If step 1 showed you're on the default branch, create a feature branch first. Git
-carries your staged and unstaged changes across a branch switch, so doing this after staging loses
-no work.
+Two things have to hold before you commit: you're not on the default branch, and the branch you're
+on has an upstream. Git carries staged and unstaged changes across a branch switch, so doing this
+after staging loses no work.
 
 Determine the remote's default branch:
 
@@ -155,6 +154,14 @@ git symbolic-ref --short refs/remotes/origin/HEAD
 This prints something like `origin/main`. You're on the default branch when `git branch
 --show-current` matches its short name (`main` here). If that command errors — some repos don't set
 `origin/HEAD` — treat a current branch of `main` or `master` as the default.
+
+If you're in a detached HEAD state (`git branch --show-current` prints nothing), don't guess — stop
+without committing and report that the caller needs to decide where the commit should land.
+
+#### 5a. On the default branch: create a feature branch
+
+Committing straight onto a project's default branch is almost never what you want — it makes the
+change harder to review, harder to open a PR from, and harder to undo.
 
 Name the branch after the commit you just wrote: take the description, drop the `type(scope):`
 prefix, lowercase it, and join the words with hyphens. `feat(auth): implement JWT auth` becomes
@@ -178,9 +185,42 @@ tracking and tell the user its upstream will be set on their first push:
 git switch -c implement-jwt-auth
 ```
 
-If you're in a detached HEAD state (`git branch --show-current` prints nothing), don't guess — stop
-without committing and report that the caller needs to decide where the commit should land. If
-you're already on a feature branch (not the default), skip this step and commit as normal.
+#### 5b. On a feature branch: make sure it has the right upstream
+
+A branch created without `-t` (or off another local branch) can have no upstream at all, which
+leaves `git status` and `git pull` with nothing to compare against. Check it:
+
+```bash
+git status -sb
+```
+
+The first line reads `## branch...origin/branch` when an upstream is set — leave it alone and
+commit. A bare `## branch` means there's no upstream, so pick one.
+
+The upstream is the remote default (`origin/main` or equivalent) unless this work is **stacked** on
+another local branch that hasn't landed yet — in which case it's that parent branch, so diffs and
+PRs show only this branch's commits. Detect that by listing the local branches whose tips are
+ancestors of `HEAD`:
+
+```bash
+git branch --merged HEAD --sort=-committerdate
+```
+
+Ignore the current branch (the one marked `*`) and the default branch. If any branch remains, the
+work is stacked on it — the first one listed is the most recently committed, so take that:
+
+```bash
+git branch --set-upstream-to=parent-branch
+```
+
+Otherwise the branch came off the default, so track that:
+
+```bash
+git branch --set-upstream-to=origin/main
+```
+
+If neither exists — no `origin` remote and no parent branch — commit anyway and report that the
+upstream will be set on the caller's first push.
 
 ### 6. Execute Commit
 
@@ -209,7 +249,8 @@ Confirm the commit landed correctly.
 Your final message is all the caller sees — the diff, the file reads, and the git output stay in
 this subagent. Keep it to a few lines covering:
 
-- The commit line from step 7, and the branch it landed on (say so explicitly if you created one).
+- The commit line from step 7, and the branch it landed on (say so explicitly if you created one, or
+  if you set an upstream — name the upstream you chose).
 - Any docs you updated into the commit, or any you found stale and left alone.
 - Anything you stopped on instead of committing, and what decision the caller needs to make.
 
@@ -230,5 +271,6 @@ this subagent. Keep it to a few lines covering:
 - NEVER skip hooks (`--no-verify`) unless user asks
 - NEVER force push to main/master
 - NEVER commit directly onto the default branch (main/master/…) — create a feature branch first (see step 5)
+- NEVER leave a branch without an upstream — it tracks the remote default, or the parent branch when the work is stacked (see step 5b)
 - NEVER add Co-Authored-By trailers or any reference to being AI-generated in commit messages
 - If a hook fails or modifies files, fix the underlying issue, restage, and run a fresh `git commit` — never amend, never `--no-verify`
