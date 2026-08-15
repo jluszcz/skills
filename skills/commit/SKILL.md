@@ -7,6 +7,15 @@ description: >
   checking that documentation (README.md, CLAUDE.md, etc.) is up to date, creating a feature branch
   when you'd otherwise commit onto the default branch, and enforcing git safety rules.
 license: MIT
+# Runs as a forked subagent on Sonnet: the diff, the doc scan, and the git
+# plumbing all stay out of the caller's context, and none of it needs Opus.
+# `background: false` keeps the caller blocked until the commit actually lands —
+# this skill mutates the working tree and branch, so its result is not something
+# to collect later.
+model: sonnet
+context: fork
+background: false
+argument-hint: "[why this change was made, if the diff doesn't show it]"
 allowed-tools:
   # Reading and updating stale docs is part of step 3, so the file tools are
   # needed as much as the git ones.
@@ -29,6 +38,22 @@ allowed-tools:
 ## Overview
 
 Create standardized, semantic git commits. Analyze the actual diff to determine appropriate scope, and message.
+
+## Execution Context
+
+You are running as a forked subagent. Two consequences shape everything below:
+
+- **You cannot see the conversation that triggered this.** The diff, `git log`, and the caller's
+  arguments are your only evidence. Don't invent a "why" you can't support from them.
+- **You cannot ask the user anything mid-run.** When a step says you'd need a decision from them,
+  stop before committing and report why — don't guess and commit anyway.
+
+Caller-supplied context on why this change was made (may be empty):
+
+$ARGUMENTS
+
+Treat that as the "why" for the commit body when the diff alone doesn't explain the change. If it's
+empty, derive everything from the diff.
 
 ## Commit Format
 
@@ -101,7 +126,7 @@ Triggers that usually require a doc update:
 - Changed install steps, dependencies, or supported versions.
 - Changed default behavior or configuration described in docs.
 
-If docs are stale, update them and stage the changes so they land in the **same commit** as the code they describe. If a doc change is genuinely out of scope, tell the user rather than silently skipping it.
+If docs are stale, update them and stage the changes so they land in the **same commit** as the code they describe. If a doc change is genuinely out of scope, commit without it and name the stale doc in your final report rather than silently skipping it.
 
 ### 4. Generate Commit Message
 
@@ -153,9 +178,9 @@ tracking and tell the user its upstream will be set on their first push:
 git switch -c implement-jwt-auth
 ```
 
-If you're in a detached HEAD state (`git branch --show-current` prints nothing), don't guess — tell
-the user and let them decide where the commit should land. If you're already on a feature branch
-(not the default), skip this step and commit as normal.
+If you're in a detached HEAD state (`git branch --show-current` prints nothing), don't guess — stop
+without committing and report that the caller needs to decide where the commit should land. If
+you're already on a feature branch (not the default), skip this step and commit as normal.
 
 ### 6. Execute Commit
 
@@ -178,6 +203,15 @@ git log --oneline -1
 ```
 
 Confirm the commit landed correctly.
+
+### 8. Report Back
+
+Your final message is all the caller sees — the diff, the file reads, and the git output stay in
+this subagent. Keep it to a few lines covering:
+
+- The commit line from step 7, and the branch it landed on (say so explicitly if you created one).
+- Any docs you updated into the commit, or any you found stale and left alone.
+- Anything you stopped on instead of committing, and what decision the caller needs to make.
 
 ## Best Practices
 

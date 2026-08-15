@@ -65,6 +65,21 @@ commands.** A skill that says to read a file, edit one, or look at an image need
 which surfaces as a permission prompt in the middle of the task — exactly what these grants exist to
 avoid. When editing a skill body, re-read its frontmatter.
 
+### Running a Skill Forked and On a Cheaper Model
+
+`commit` sets `model: sonnet` + `context: fork` + `background: false`. `model` accepts a family
+alias (`haiku`/`sonnet`/`opus`/`fable`), a full model ID, or `inherit`, and applies whether the
+skill runs inline or forked; if an org policy restricts the model, the parent model runs instead and
+Claude Code warns rather than failing.
+
+`context: fork` spawns a **fresh** subagent whose prompt is the skill body plus the invocation
+arguments — it does *not* inherit the caller's conversation. That's the point (the diff and file
+reads never enter the caller's context), but it means a forked skill has no memory of why the work
+was done and cannot ask the user anything mid-run. Write forked bodies accordingly: take the missing
+context through `$ARGUMENTS`, stop-and-report instead of prompting, and end with an explicit report
+step, since the final message is all the caller sees. Forks default to background; `background:
+false` keeps the caller blocked, which is what you want for anything that mutates the working tree.
+
 ## Checks
 
 No build or test suite. Pre-commit hooks (`.pre-commit-config.yaml`: check-json, end-of-file-fixer,
