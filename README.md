@@ -4,12 +4,10 @@ A Claude Code plugin providing skills for git commits and media organization.
 
 ## Skills
 
-### `/commit [why this change was made]`
+### `/commit`
 
 Analyzes your staged/unstaged changes, generates a semantic commit message, and executes the commit.
 
-- Runs as a forked subagent on Sonnet, so the diff and doc scan stay out of the caller's context
-- Takes optional context for the commit body, since the fork can't see your conversation
 - Infers scope from the diff
 - Matches message style from recent commits
 - Stages files intelligently for logical grouping
