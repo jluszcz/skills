@@ -60,43 +60,10 @@ documents this in depth; keep new skills consistent with it.
 
 **`allowed-tools` must cover every tool the body tells the model to use, not just the shell
 commands.** A skill that says to read a file, edit one, or look at an image needs `Read`/`Edit`/
-`Glob` listed alongside its `Bash(...)` prefixes. Both `commit-worker` (which updates stale docs) and
+`Glob` listed alongside its `Bash(...)` prefixes. Both `commit` (which updates stale docs) and
 `rip-rename` (which reads a photo of a disc case) instructed work their frontmatter did not permit,
 which surfaces as a permission prompt in the middle of the task — exactly what these grants exist to
 avoid. When editing a skill body, re-read its frontmatter.
-
-### Running a Skill Forked and On a Cheaper Model
-
-`commit-worker` sets `model: sonnet` + `context: fork` + `background: false`. `model` accepts a
-family alias (`haiku`/`sonnet`/`opus`/`fable`), a full model ID, or `inherit`, and applies whether
-the skill runs inline or forked; if an org policy restricts the model, the parent model runs instead
-and Claude Code warns rather than failing.
-
-`context: fork` spawns a **fresh** subagent whose prompt is the skill body plus the invocation
-arguments — it does *not* inherit the caller's conversation. That's the point (the diff and file
-reads never enter the caller's context), but it means a forked skill has no memory of why the work
-was done and cannot ask the user anything mid-run. Write forked bodies accordingly: take the missing
-context through `$ARGUMENTS`, stop-and-report instead of prompting, and end with an explicit report
-step, since the final message is all the caller sees. Forks default to background; `background:
-false` keeps the caller blocked, which is what you want for anything that mutates the working tree.
-
-#### The Wrapper/Worker Split
-
-A forked skill invoked as a typed slash command gets **nothing** from the conversation, not even a
-model-written summary: the harness dispatches the fork straight from the user's `/skill-name` input
-with no assistant turn in between, so `$ARGUMENTS` expands to the empty string. (Invoked in natural
-language instead — "commit this" — the model calls the `Skill` tool and *may* pass `args`, but
-inconsistently.) There is no frontmatter knob for this; a fork is blind by construction.
-
-`commit` and `commit-worker` are the pattern for getting that context back: a thin **inline**
-wrapper carrying the triggering description and the user-facing name, whose entire job is to write a
-short context brief from the conversation and invoke the forked worker with it via the `Skill` tool.
-The wrapper must be explicitly forbidden from touching the subject matter (`commit`'s body bans
-running git) — if it reads the diff itself, the fork has bought nothing. The worker's description
-opens by pointing back at the wrapper, so the model doesn't invoke the worker directly on "commit".
-
-Worth it only when the conversational "why" materially improves the output; the cost is a second
-skill to keep in sync and an extra model turn on the parent's model.
 
 ## Checks
 
