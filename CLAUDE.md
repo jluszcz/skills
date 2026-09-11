@@ -65,6 +65,12 @@ commands.** A skill that says to read a file, edit one, or look at an image need
 which surfaces as a permission prompt in the middle of the task — exactly what these grants exist to
 avoid. When editing a skill body, re-read its frontmatter.
 
+**Any `git diff` a skill runs must pass `--no-ext-diff`.** A user's global `diff.external` (e.g.
+difftastic) replaces the unified diff with a side-by-side rendering that, stripped of color as it is
+when output isn't a terminal, marks changed lines with nothing at all — a modified line reads as
+context, so the model reviews the pre-change file. The flag preserves the `Bash(git diff:*)` prefix
+match; `git -c diff.external= diff` does not. `git log`/`git show` already default to `--no-ext-diff`.
+
 ## Checks
 
 No build or test suite. Pre-commit hooks (`.pre-commit-config.yaml`: check-json, end-of-file-fixer,

@@ -54,10 +54,10 @@ recent history: if its commits use type prefixes (`feat(auth): …`), use them; 
 git status --porcelain
 
 # If files are staged, use staged diff
-git diff --staged
+git diff --no-ext-diff --staged
 
 # If nothing staged, use working tree diff
-git diff
+git diff --no-ext-diff
 
 # Check recent commits to match project style
 git log --oneline -5
@@ -65,6 +65,14 @@ git log --oneline -5
 # Note the current branch — you'll create a feature branch later if this is the default branch
 git branch --show-current
 ```
+
+Always pass `--no-ext-diff` to `git diff`. A global `diff.external` (difftastic and friends)
+replaces git's unified diff with a side-by-side rendering, and with color stripped — as it is when
+the output isn't a terminal — changed lines carry no `+`/`-` markers at all. Old and new values
+both appear as plain text, so a modified line is indistinguishable from context and the diff reads
+as if nothing changed. `--no-ext-diff` still matches the `Bash(git diff:*)` prefix, so it
+costs no permission prompt; `git -c diff.external= diff` would not match and would prompt. The
+`git log` family already defaults to `--no-ext-diff` and needs no flag.
 
 ### 2. Stage Files (if needed)
 
