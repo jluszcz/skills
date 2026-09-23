@@ -11,7 +11,7 @@ Analyzes your staged/unstaged changes, generates a semantic commit message, and 
 - Infers scope from the diff
 - Matches message style from recent commits
 - Stages files intelligently for logical grouping
-- Checks that documentation (README.md, CLAUDE.md, etc.) is up to date before committing
+- Checks that documentation (README.md, AGENTS.md, etc.) is up to date before committing
 - Follows git safety protocols (no `--no-verify`, no force pushes)
 
 ### `/movie-report`
@@ -42,7 +42,7 @@ Renames ripped TV show disc files (e.g. `title_t00.mkv`) into properly named epi
 
 `main` requires PRs and a passing Claude review check. The automated version-bump workflow is exempted
 from that via a repository-role bypass tied to a repo-scoped PAT, not a blanket exemption for GitHub
-Actions — see `CLAUDE.md` for how it's wired up and the "pwn request" risk of extending that bypass to
+Actions — see `AGENTS.md` for how it's wired up and the "pwn request" risk of extending that bypass to
 other workflows.
 
 ### Rotating the `BUMP_VERSION_PAT` secret

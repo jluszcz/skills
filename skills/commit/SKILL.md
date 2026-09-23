@@ -4,7 +4,7 @@ description: >
   Create a git commit. Trigger whenever the user asks to commit — "commit", "/commit", "make a
   commit", "stage and commit", "commit my changes", "commit this", "save my work to git". Handles
   auto-detecting scope from the diff, generating a semantic commit message, intelligent staging,
-  checking that documentation (README.md, CLAUDE.md, etc.) is up to date, creating a feature branch
+  checking that documentation (README.md, AGENTS.md, etc.) is up to date, creating a feature branch
   when you'd otherwise commit onto the default branch, and enforcing git safety rules.
 license: MIT
 allowed-tools:
@@ -86,13 +86,13 @@ Before generating the message, verify that documentation reflects the changes be
 
 ```bash
 # Find docs that may need updating
-git ls-files '*README*' '*CLAUDE.md' 'docs/**' '*.md'
+git ls-files '*README*' '*AGENTS.md' 'docs/**' '*.md'
 ```
 
 Check whether the diff invalidates any of:
 
 - **README.md** — installation/usage/examples, feature lists, supported options, badges, project structure.
-- **CLAUDE.md** (and `AGENTS.md`, `.cursorrules`, etc.) — build/test/lint commands, conventions, architecture notes.
+- **AGENTS.md** (and `CLAUDE.md`, `.cursorrules`, etc.) — build/test/lint commands, conventions, architecture notes.
 - **Other equivalent docs** — `docs/`, `CONTRIBUTING.md`, `CHANGELOG.md`, API docs, config samples (`.env.example`), inline help/usage text, and version numbers in manifests.
 
 Triggers that usually require a doc update:
@@ -187,7 +187,7 @@ Confirm the commit landed correctly.
 - Reference issues: `Closes #123`, `Refs #456`
 - Keep description under 80 characters
 - Match scope style and casing from recent commits in the repo
-- Keep docs (README.md, CLAUDE.md, etc.) in sync — commit doc updates alongside the code that changed them
+- Keep docs (README.md, AGENTS.md, etc.) in sync — commit doc updates alongside the code that changed them
 
 ## Git Safety Protocol
 
