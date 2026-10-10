@@ -1,6 +1,6 @@
 # jluszcz Claude Code Plugin
 
-A Claude Code plugin providing skills for git commits and media organization.
+A Claude Code plugin providing skills for git commits, pull requests, and media organization.
 
 ## Skills
 
@@ -25,6 +25,17 @@ Letterboxd export, and MovieList ranked lists.
 - Verifies "not owned" claims against the library before recommending purchases
 - Flags streaming-only titles with no disc release
 - Ignores TV shows
+
+### `/pr`
+
+Takes local work to an open pull request: code review, fixes, commit, push, and `gh pr create`.
+
+- Runs `/code-review --fix` at medium effort by default; pass `low`, `high`, `xhigh`, or `max` to
+  change it
+- Checks the review's fixes before committing them
+- Commits via `/commit`, which creates a feature branch when on the default branch
+- Picks the PR base from the branch's upstream, so stacked PRs target their parent branch
+- Reports an existing PR instead of opening a duplicate
 
 ### `/rip-rename`
 
