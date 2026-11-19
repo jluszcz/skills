@@ -11,7 +11,7 @@ jobs:
   bump-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 2
           token: ${{ secrets.BUMP_VERSION_PAT }}
